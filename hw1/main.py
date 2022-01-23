@@ -8,4 +8,7 @@ def fibonacci(n: int) -> int:
 
 
 if __name__ == '__main__':
-    print(fibonacci(int(input())))
+    n = int(input())
+    with open("artifacts/out_fibonacci.txt", 'a') as out:
+        out.write(str(str(n) + ' : '))
+        out.write(str(fibonacci(n)) + '\n')
