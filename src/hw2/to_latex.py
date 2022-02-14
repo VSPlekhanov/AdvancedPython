@@ -7,8 +7,8 @@ prefix = """
 \\author{Слава Плеханов}
 
 \\begin{document}
+\\begin{tabular}{"""
 
-"""
 postfix = """
 \\hline
 \\end{tabular}
@@ -18,44 +18,63 @@ postfix = """
 escape_set = {'&', '%', '#', '_', '{', '}', '\\'}
 
 
-def to_table(arr):
-    l = len(arr)
-    if l == 0:
-        return ''
-    result = prefix
-    result += '\\begin{tabular}{'
-    result += "l".join([" | " for _ in range(len(arr[0]) + 1)])
-    result += '}\n'
-    result += '\\hline\n'
-    for i in range(len(arr)):
-        for j in range(len(arr[i])):
-            for c in escape_set:
-                if c in arr[i][j]:
-                    arr[i][j] = arr[i][j].replace(c, '\\' + c)
-            result += (' & ' + arr[i][j]) if j != 0 else arr[i][j]
-        result += ' \\\\\n' if i != 0 else ' \\\\ \\hline\n'
-    result += postfix
-    return result
+class Appendable:
+    def __init__(self, state):
+        self.state = state
+
+    def append(self, additional):
+        return Appendable(self.state + additional)
+
+    def get(self):
+        return self.state
 
 
-arr1 = [
-    ['Writer', 'Year of birth', 'Country of birth'],
-    ['Dovlatov', '1941', 'USSR'],
-    ['Pelevin', '1962', 'USSR'],
-    ['Lem', '1962', 'Poland'],
-    ['Sholohov', '1905', 'Russian Empire'],
-    ['Remark', '1898', 'Germany'],
-    ['Strugatskie', '1925 & 1933', 'USSR']
+class Optional:
+    def __init__(self, state):
+        self.state = state
+
+    def compute_if_present(self, func):
+        return func() if self.state else ''
+
+
+def to_table(array):
+    def escape(sentence):
+        return ''.join(map(lambda c: c if c not in escape_set else '\\' + c, sentence))
+
+    def handle_line(line):
+        return " & ".join(map(lambda y: escape(y), line))
+
+    def create_table(arr):
+        return Appendable(prefix)\
+            .append("l".join(map(lambda x: " | ", range(len(arr[0]) + 1))))\
+            .append('}\n\\hline\n')\
+            .append(handle_line(arr[0]))\
+            .append(' \\\\ \\hline\n')\
+            .append("\\\\\n".join(map(lambda x: handle_line(x), arr[1:])))\
+            .append("\\\\\n" if len(arr) > 1 else '')\
+            .append(postfix)\
+            .get()
+
+    return Optional(array).compute_if_present(lambda: create_table(array))
+
+
+tests = [
+    [
+        ['Writer', 'Year of birth', 'Country of birth'],
+        ['Dovlatov', '1941', 'USSR'],
+        ['Pelevin', '1962', 'USSR'],
+        ['Lem', '1962', 'Poland'],
+        ['Sholohov', '1905', 'Russian Empire'],
+        ['Remark', '1898', 'Germany'],
+        ['Strugatsky', '1925 & 1933', 'USSR']
+    ],
+    [
+        ['A', 'B'],
+        ['True', 'False']
+    ],
+    [],
+    ['a', 'b', 'c']
 ]
-
-arr2 = [
-    ['A', 'B'],
-    ['True', 'False']
-]
-
-arr3 = [
-]
-
-arr4 = ['arr']
-
-print(to_table(arr1))
+for i, test in enumerate(tests):
+    with open(f"artifacts/out_table_{i}.tex", 'a') as out:
+        out.write(to_table(test))
