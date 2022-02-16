@@ -95,10 +95,16 @@ class MyVisitor(ast.NodeVisitor):
                     self.visit_or_skip(child, parent_id, children_name)
 
 
-if __name__ == '__main__':
-    with open("fibonacci.py", 'r') as fibonacci:
+def render(path, filename):
+    from plekhanov_hw1 import fibonacci
+    # import fibonacci
+    with open(fibonacci.__file__) as fibonacci:
         ast_object = ast.parse(fibonacci.read())
-        dot = graphviz.Digraph('round-table', comment='The Round Table')
+        dot = graphviz.Digraph(filename)
         v = MyVisitor(dot)
         v.visit(ast_object)
-        dot.render(directory='artifacts', view=True)
+        dot.render(filename=filename, directory=path, view=False, format='png')
+
+
+if __name__ == '__main__':
+    render('artifacts/', 'tree')

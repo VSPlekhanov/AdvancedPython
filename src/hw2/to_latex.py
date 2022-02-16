@@ -1,13 +1,41 @@
-prefix = """
-\\documentclass{article}
-\\usepackage[T2A]{fontenc}
-\\usepackage[utf8]{inputenc}
-\\usepackage[russian]{babel}
-\\title{test}
-\\author{Слава Плеханов}
+import test_data
+import subprocess
+from plekhanov_hw1 import ast_print
 
-\\begin{document}
-\\begin{tabular}{"""
+
+def prefix(graphic_path):
+    return """
+    \\documentclass{article}
+    \\usepackage[T2A]{fontenc}
+    \\usepackage[utf8]{inputenc}
+    \\usepackage[russian]{babel}
+    \\title{test}
+    \\usepackage{graphicx}
+    \\graphicspath{ {%s} }
+    \\author{Слава Плеханов}
+    
+    \\begin{document}""" % graphic_path
+
+
+separator = """
+    \\hfill \\break
+    \\hfill \\break
+    \\hfill \\break
+    \\hfill \\break
+    \\hfill \\break
+"""
+
+title_table = """
+    \\begin{center}
+        Amazing Table:
+    \\end{center}
+"""
+
+title_picture = """
+    \\begin{center}
+        Fantastic Picture:
+    \\end{center}
+"""
 
 postfix = """
 \\hline
@@ -33,11 +61,11 @@ class Optional:
     def __init__(self, state):
         self.state = state
 
-    def compute_if_present(self, func):
-        return func() if self.state else ''
+    def compute_if_present(self, func, default):
+        return func() if self.state else default
 
 
-def to_table(array):
+def to_table_with_picture(array, graphic_path, picture_name):
     def escape(sentence):
         return ''.join(map(lambda c: c if c not in escape_set else '\\' + c, sentence))
 
@@ -45,36 +73,39 @@ def to_table(array):
         return " & ".join(map(lambda y: escape(y), line))
 
     def create_table(arr):
-        return Appendable(prefix)\
-            .append("l".join(map(lambda x: " | ", range(len(arr[0]) + 1))))\
-            .append('}\n\\hline\n')\
-            .append(handle_line(arr[0]))\
-            .append(' \\\\ \\hline\n')\
-            .append("\\\\\n".join(map(lambda x: handle_line(x), arr[1:])))\
-            .append("\\\\\n" if len(arr) > 1 else '')\
-            .append(postfix)\
+        return Appendable(prefix(graphic_path)) \
+            .append(title_table) \
+            .append('\\begin{tabular}{') \
+            .append("l".join(map(lambda x: " | ", range(len(arr[0]) + 1)))) \
+            .append('}\n\\hline\n') \
+            .append(handle_line(arr[0])) \
+            .append(' \\\\ \\hline\n') \
+            .append("\\\\\n".join(map(lambda x: handle_line(x), arr[1:]))) \
+            .append("\\\\\n" if len(arr) > 1 else '') \
+            .append('\\hline') \
+            .append('\\end{tabular}') \
+            .append(separator) \
+            .append(title_picture) \
+            .append('\\includegraphics[scale=0.15]{%s}' % picture_name) \
+            .append('\\end{document}') \
+            .append(postfix) \
             .get()
 
-    return Optional(array).compute_if_present(lambda: create_table(array))
+    return Optional(array).compute_if_present(lambda: create_table(array), '')
 
 
-tests = [
-    [
-        ['Writer', 'Year of birth', 'Country of birth'],
-        ['Dovlatov', '1941', 'USSR'],
-        ['Pelevin', '1962', 'USSR'],
-        ['Lem', '1962', 'Poland'],
-        ['Sholohov', '1905', 'Russian Empire'],
-        ['Remark', '1898', 'Germany'],
-        ['Strugatsky', '1925 & 1933', 'USSR']
-    ],
-    [
-        ['A', 'B'],
-        ['True', 'False']
-    ],
-    [],
-    ['a', 'b', 'c']
-]
-for i, test in enumerate(tests):
-    with open(f"artifacts/out_table_{i}.tex", 'a') as out:
-        out.write(to_table(test))
+if __name__ == '__main__':
+    path = 'artifacts/'
+    filename = 'tree'
+    ast_print.render(path, filename)
+    for i, test in enumerate(test_data.get_tests()):
+        res = to_table_with_picture(test, path, filename + '.png')
+        if len(res) > 0:
+            curr_file = f"artifacts/out_table_{i}.tex"
+            with open(curr_file, 'w') as out:
+                out.write(res)
+            subprocess.run(["latexmk", "-cd", "-pdf", curr_file])
+            subprocess.run(["latexmk", "-cd", "-c", curr_file])
+
+
+
