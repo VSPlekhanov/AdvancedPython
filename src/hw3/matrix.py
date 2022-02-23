@@ -2,7 +2,8 @@ class InvalidArgumentError(Exception):
     pass
 
 
-class Matrix:
+class MyMixin:
+    __matmul_cache = {}
 
     def __init__(self, state):
         cols = len(state[0]) if len(state) > 0 else 0
@@ -68,6 +69,12 @@ class Matrix:
         return self.__for_each(other, lambda a, b: a - b)
 
     def __matmul__(self, other):
+        hashes = (hash(self), hash(other))
+        if hashes not in self.__matmul_cache:
+            self.__matmul_cache[hashes] = self.default_matmul(other)
+        return self.__matmul_cache[hashes]
+
+    def default_matmul(self, other):
         if self.cols != other.rows:
             raise InvalidArgumentError
         if self.shape == (0, 0):
@@ -84,8 +91,49 @@ class Matrix:
     def __repr__(self):
         return "\n".join(["\t".join([str(x) for x in row]) for row in self.state])
 
+    """
+    This is simple hash function which sum up all matrix elements multiplied by 2 in the power of its order number
+    For instance matrix hash(Matrix([[1, 2, 3]])) would be (2 ** 0 * 1 + 2 ** 1 * 2 + 2 ** 3 * 3) = 
+        = (1 + 2 * 2 + 3 * 4) = 17  
+    """
 
-if __name__ == '__main__':
+    def __hash__(self):
+        res = 0
+        for i in range(self.rows):
+            for j in range(self.cols):
+                res += 2 ** (i * self.cols + j) * self[i][j]
+        return res
+
+
+class Matrix(MyMixin):
+    pass
+
+
+def hard_main():
+    a = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    c = Matrix([[3, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]])
+    b = Matrix([[1, 2], [3, 4], [5, 6]])
+
+    with(open("artifacts/A.txt", "w")) as out:
+        out.write(str(a))
+
+    with(open("artifacts/B.txt", "w")) as out:
+        out.write(str(b))
+
+    with(open("artifacts/C.txt", "w")) as out:
+        out.write(str(c))
+
+    with(open("artifacts/D.txt", "w")) as out:
+        out.write(str(b))
+
+    with(open("artifacts/AB.txt", "w")) as out:
+        out.write(str(a @ b))
+
+    with(open("artifacts/CD.txt", "w")) as out:
+        out.write(str(c.default_matmul(b)))
+
+
+def easy_main():
     import numpy as np
 
     np.random.seed(0)
@@ -100,3 +148,7 @@ if __name__ == '__main__':
 
     with(open("artifacts/matrix@.txt", "w")) as out:
         out.write(str(m1 @ m2))
+
+
+if __name__ == '__main__':
+    hard_main()
