@@ -1,0 +1,2 @@
+Processes time: 5.178987979888916s
+Threads time: 29.780593872070312s
